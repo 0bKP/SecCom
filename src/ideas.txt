@@ -1,0 +1,15 @@
+- - - - DOŁĄCZANIE DO POKOJU
+- Host, który chce dołączyć przekazuje numer pokoju w argumencie –i
+- Host łączy się z wszystkimi węzłami, które są w pokoju
+- Host łączy się z 1-3 hostami w obrębie pokoju. (Tak, aby przy awarii jednego węzła komunikacja wciąż działała - redundancja).
+(patrz: drzewo rozpinające)
+- Wszystkie hosty łączą się z powrotem
+- Host, który chce wysłać wiadomość, wysyła wiadomość do wszystkich aktywnych połączeń, następnie tamte połączenia przesyłają je
+dalej, tak aby każdy dostał wiadomość
+
+- - - - WYKRYWANIE HOSTÓW W SIECI
+- Osoba, która wchodzi do chatu wysyła broadcast, aby zobaczyć jakie inne hosty są aktywne.
+- Utrzymuje listę hostów w set() oraz listę ip w dict()
+- Aktywne węzły w odpowiedzi wysyłają ID pokoju, w którym
+- Host, który chce dołączyć wpisuje ID pokoju. Po wpisaniu może zostać poproszony o uwierzytelnienie. Po tym procesie otrzymuje
+listę z aktywnymi hostami w pokoju.
