@@ -13,3 +13,5 @@ dalej, tak aby każdy dostał wiadomość
 - Aktywne węzły w odpowiedzi wysyłają ID pokoju, w którym
 - Host, który chce dołączyć wpisuje ID pokoju. Po wpisaniu może zostać poproszony o uwierzytelnienie. Po tym procesie otrzymuje
 listę z aktywnymi hostami w pokoju.
+
+- - ROZDZIELIĆ KLIENTA I SERWER NA OSOBNE PLIKI

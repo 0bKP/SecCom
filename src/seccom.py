@@ -1,5 +1,5 @@
 import argparse
-import communication
+import client
 
 
 parser = argparse.ArgumentParser(
