@@ -35,7 +35,7 @@ def discover_nodes():
 # Funkcja musi dzialac w osobnym watku
 def hello_message():
     LISTEN_PORT = 15000
-    RESPONSE_MESSAGE = "Room ID"
+    RESPONSE_MESSAGE = b"Room ID"
 
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as hello_socket:
         hello_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -62,3 +62,28 @@ args = parser.parse_args()
 
 if args.discover: discover_nodes()
 # SECCOM
+
+
+# SERWER I KLIENT
+username="alice"
+def listen_for_messages(port):
+    server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    server.bind(('0.0.0.0', port))
+    print(f"[Nasłuchiwanie] Węzeł uruchomiony na porcie {port}")
+
+    while True:
+        msg, addr = server.recvfrom(1024)
+        print(f"[{addr}] {msg.decode('utf-8')}")
+
+
+# Funkcja do wysyłania wiadomości do innego węzła
+def send_message(target_ip, target_port):
+    client = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    x = input("confirm")
+
+    while True:
+        msg = input()
+        msg = username + ": " + msg
+        if msg.lower() == 'exit':
+            break
+        client.sendto(msg.encode('utf-8'), (target_ip, target_port))
