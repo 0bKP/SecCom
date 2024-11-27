@@ -2,22 +2,23 @@ import socket
 import threading
 import server
 
-PORT = 15000
 BROADCAST_MESSAGE = b"R u there?"
-TIMEOUT = 5
-CONNECTION = 0
 
 
 class Client(threading.Thread):
-    def __init__(self):
+    def __init__(self, port=15000):
         super(Client, self).__init__()
+        self.port = port
+        self.conn_count = 0
+        self.timeout = 5
 
     def discover_nodes(self, verbose=True):
         # Function broadcasts a message in order to detect active nodes
         active_rooms = dict()
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) as broadcast_socket:
-            broadcast_socket.settimeout(TIMEOUT)
-            broadcast_socket.sendto(BROADCAST_MESSAGE, ('192.168.175.255', PORT))
+            broadcast_socket.settimeout(self.timeout)
+            # Zamist IP dajemy tu: host = socket.gethostname(); ip = socket.gethostbyname(host) ze zmienionym ostatnim oktetem
+            broadcast_socket.sendto(BROADCAST_MESSAGE, ('192.168.175.255', self.port))
             # print(f"Broadcast sent on port {BROADCAST_PORT}") #
             if verbose: print("[i] Locating active rooms...")
 
@@ -45,18 +46,27 @@ class Client(threading.Thread):
         # print(len(target_ip)) #
         # Zaimplementowac spanning tree dla len(active_rooms[room_id]) >= 5
 
+        if not target_ip:
+            print(f"[!] Room {room_id} not found.")
+            return
+
         if len(target_ip) < 5:
             for ip in target_ip:
                 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                client.connect((ip, PORT))
-                print(f"Polaczono z {ip}:{PORT}")  #
-                CONNECTION += 1
-                threading.Thread(target=self.receive_message, args=(client,)).start()
-                threading.Thread(target=self.send_message, args=(client, username)).start()
+                try:
+                    client.connect((ip, self.port))
+                    print(f"Connected to {ip}:{self.port}")
+                    self.conn_count += 1
+                    threading.Thread(target=self.receive_message, args=(client,)).start()
+                    threading.Thread(target=self.send_message, args=(client, username)).start()
+                except Exception as e:
+                    print(f"[!] Failed to connect to {ip}: {e}")
 
-        if CONNECTION:
+        """
+        if self.conn_count > 0:
             server_inst = server.Server(listen_port=15000, room_id=room_id.encode())
-            server_inst.start()
+            threading.Thread(target=server_inst.start).start()
+        """
 
     def send_message(self, client_socket, username):
         # x = input("send_message exec") #

@@ -23,6 +23,11 @@ class Server(threading.Thread):
                 hello_socket.sendto(self.room_id, addr)
                 print(f"Response sent to {addr[0]}")  #
 
+    def handle_client(self, client_socket, client_address):
+        print(f"Połączono z {client_address}")
+        threading.Thread(target=self.send_message, args=(client_socket,)).start()
+        threading.Thread(target=self.receive_message, args=(client_socket,)).start()
+
     def run(self):  # Function called by threading on start
         threading.Thread(target=self.hello_message).start()
         # Tworzenie gniazda (socket) dla połączeń TCP
@@ -34,10 +39,10 @@ class Server(threading.Thread):
         client_socket, client_address = server_socket.accept()
         # print(f"client_socket: {client_socket}") #
         # print(f"client_address: {client_address}") #
-        print(f"Połączono z {client_address}")
 
-        threading.Thread(target=self.send_message, args=(client_socket,)).start()
-        threading.Thread(target=self.receive_message, args=(client_socket,)).start()
+        while True:
+            client_socket, client_address = server_socket.accept()
+            self.handle_client(client_socket, client_address)
 
     def send_message(self, connection):
         while True:
