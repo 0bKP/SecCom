@@ -5,7 +5,7 @@ import server
 PORT = 15000
 BROADCAST_MESSAGE = b"R u there?"
 TIMEOUT = 5
-CONNECTION = False
+CONNECTION = 0
 
 
 class Client(threading.Thread):
@@ -39,7 +39,7 @@ class Client(threading.Thread):
                     # connect_to_room()
 
     def connect_to_room(self, room_id, username):
-        x = input("connect_to_room exec")  #
+        # x = input("connect_to_room exec") #
         active_rooms = self.discover_nodes(verbose=False)
         target_ip = active_rooms[room_id]
         # print(len(target_ip)) #
@@ -50,15 +50,13 @@ class Client(threading.Thread):
                 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 client.connect((ip, PORT))
                 print(f"Polaczono z {ip}:{PORT}")  #
-                CONNECTION = True
+                CONNECTION += 1
                 threading.Thread(target=self.receive_message, args=(client,)).start()
                 threading.Thread(target=self.send_message, args=(client, username)).start()
 
-        """
         if CONNECTION:
-            threading.Thread(target=server.hello_message).start()
-            threading.Thread(target=server.start_server).start()
-        """
+            server_inst = server.Server(listen_port=15000, room_id=room_id.encode())
+            server_inst.start()
 
     def send_message(self, client_socket, username):
         # x = input("send_message exec") #

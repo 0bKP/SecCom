@@ -12,9 +12,9 @@ class Server(threading.Thread):
     def hello_message(self):
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as hello_socket:
             hello_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            hello_socket.bind(("", LISTEN_PORT))
+            hello_socket.bind(("", self.listen_port))
 
-            print(f"Listening on port {LISTEN_PORT}...")  #
+            print(f"Listening on port {self.listen_port}...")  #
 
             while True:
                 message, addr = hello_socket.recvfrom(1024)
