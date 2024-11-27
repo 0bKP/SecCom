@@ -1,6 +1,8 @@
 import argparse
 import client
+import server
 
+USERNAME = 0
 
 parser = argparse.ArgumentParser(
     prog="SecCom",
@@ -8,13 +10,26 @@ parser = argparse.ArgumentParser(
 parser.add_argument("-d", "--discover", help="Discover active rooms", action="store_true")
 parser.add_argument("-i", "--identity", help="Room ID you want to join", type=str)
 parser.add_argument("-u", "--username", help="Username", type=str)
+parser.add_argument("-c", "--create", help="Room ID you want to create", type=str)
 
 args = parser.parse_args()
 
-ROOM_ID = args.i
+client = client.Client()
+client.start()
 
 if args.discover:
-    communication.discover_nodes()
+    client.discover_nodes()
 
 if args.username:
     USERNAME = args.username
+
+if args.identity:
+    ROOM_ID = args.identity
+    if USERNAME:
+        client.connect_to_room(ROOM_ID, USERNAME)
+    else:
+        print("[!] You must enter username.")
+
+if args.create:
+    server = server.Server(listen_port=15000, room_id=args.create.encode())
+    server.start()
