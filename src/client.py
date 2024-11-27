@@ -17,8 +17,10 @@ class Client(threading.Thread):
         active_rooms = dict()
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP) as broadcast_socket:
             broadcast_socket.settimeout(self.timeout)
-            # Zamist IP dajemy tu: host = socket.gethostname(); ip = socket.gethostbyname(host) ze zmienionym ostatnim oktetem
-            broadcast_socket.sendto(BROADCAST_MESSAGE, ('192.168.175.255', self.port))
+
+            broadcast_ip = self.get_broadcast_ip()
+            # print(f"BC IP: {broadcast_ip}") #
+            broadcast_socket.sendto(BROADCAST_MESSAGE, (broadcast_ip, self.port))
             # print(f"Broadcast sent on port {BROADCAST_PORT}") #
             if verbose: print("[i] Locating active rooms...")
 
@@ -36,8 +38,18 @@ class Client(threading.Thread):
                     if verbose:
                         print("[*] Active rooms have been found: ")
                         print(room_ids)
+                        # print(active_rooms) #
                     return active_rooms
                     # connect_to_room()
+
+    def get_broadcast_ip(self):
+        hostname = socket.gethostname()
+        ip = socket.gethostbyname(hostname)
+        octets = ip.split(".")
+        octets[3] = "255"
+        octets = ".".join(octets)
+
+        return octets
 
     def connect_to_room(self, room_id, username):
         # x = input("connect_to_room exec") #
