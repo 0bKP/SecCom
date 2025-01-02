@@ -5,10 +5,13 @@ import json
 
 
 class Server(threading.Thread):
-    def __init__(self, listen_port=15000, room_id=None):
+    def __init__(self, listen_port=15000, room_id=None, stash=True):
         super(Server, self).__init__()
         self.listen_port = listen_port
         self.room_id = room_id
+        self.stash = stash
+        self.clients = []
+        self.hosts = []
         # print(f"Zainicjalizowano {listen_port}, {room_id}") #
 
     def hello_message(self):
@@ -20,17 +23,35 @@ class Server(threading.Thread):
 
             while True:
                 message, addr = hello_socket.recvfrom(1024)
-                print(f"Received message from {addr[0]}: {message.decode()}")  #
+                print(f"Received hello from {addr[0]}: {message.decode()}")  #
 
-                hello_socket.sendto(self.room_id, addr)
+                if addr[0] not in self.hosts:
+                    self.hosts.append(addr[0])
+
+                response_data = {
+                    "room_id": self.room_id.decode(),
+                    "hosts": self.hosts}
+                response_json = json.dumps(response_data)
+
+                hello_socket.sendto(response_json.encode(), addr)
                 print(f"Response sent to {addr[0]}")  #
 
     def handle_client(self, client_socket, client_address):
         print(f"Połączono z {client_address}")
+        self.clients.append(client_socket)
 
         encryption.send_rsa_key(client_socket)
         threading.Thread(target=self.send_message, args=(client_socket,)).start()
         threading.Thread(target=self.receive_message, args=(client_socket,)).start()
+
+    def broadcast_message(self, message, sender_socket):
+        for client in self.clients:
+            if client != sender_socket:
+                try:
+                    client.send(message)
+                except:
+                    # Remove disconnected clients
+                    self.client.remove(client)
 
     def run(self):  # Function called by threading on start
         threading.Thread(target=self.hello_message).start()

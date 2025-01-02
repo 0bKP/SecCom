@@ -12,6 +12,7 @@ class Client(threading.Thread):
         self.port = port
         self.conn_count = 0
         self.timeout = 5
+        self.connections = []
 
     def discover_nodes(self, verbose=True):
         # Function broadcasts a message in order to detect active nodes
@@ -28,20 +29,22 @@ class Client(threading.Thread):
             try:
                 while True:
                     response, addr = broadcast_socket.recvfrom(1024)
-                    active_rooms.setdefault(response.decode(), []).append(addr[0])
-                    # print(f"Received response from {addr[0]} on port {BROADCAST_PORT}: {response.decode()}") #
+                    response_data = json.loads(response.decode())
+                    room_id = response_data.get("room_id")
+                    hosts = response_data.get("hosts", [])
+                    if room_id:
+                        active_rooms.setdefault(room_id, []).extend(hosts)
+                    # print(f"Received response from {addr[0]} on port {self.port}: {response.decode()}") #
             except socket.timeout:
-                room_ids = set(active_rooms.keys())
+                for room_id in active_rooms:
+                    active_rooms[room_id] = list(set(active_rooms[room_id]))  # Delete duplicates
 
-                if not room_ids:
-                    if verbose: print("[*] Active rooms not found.")
-                else:
-                    if verbose:
-                        print("[*] Active rooms have been found: ")
-                        print(room_ids)
-                        # print(active_rooms) #
-                    return active_rooms
-                    # connect_to_room()
+                if verbose:
+                    if active_rooms:
+                        print("[*] Active rooms have been found: ", active_rooms)
+                    else:
+                        print("[*] No active rooms found.")
+                return active_rooms
 
     def get_broadcast_ip(self):
         hostname = socket.gethostname()
@@ -65,14 +68,14 @@ class Client(threading.Thread):
 
         if len(target_ip) < 5:
             for ip in target_ip:
-                client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 try:
-                    client.connect((ip, self.port))
+                    client_socket.connect((ip, self.port))
                     print(f"Connected to {ip}:{self.port}")
-                    self.conn_count += 1
+                    self.connections.append(client_socket)
                     # self.exchange_keys(client)
-                    threading.Thread(target=self.receive_message, args=(client,)).start()
-                    threading.Thread(target=self.send_message, args=(client, username)).start()
+                    threading.Thread(target=self.receive_message, args=(client_socket,)).start()
+                    threading.Thread(target=self.send_message, args=(client_socket, username)).start()
                 except Exception as e:
                     print(f"[!] Failed to connect to {ip}: {e}")
 
@@ -94,11 +97,6 @@ class Client(threading.Thread):
             })
             client_socket.send(packet.encode("utf-8"))
 
-    def exchange_key(self, key):
-        recv_rsa_key = encryption.receive_key(message_dict["key"])
-        aes_key = encryption.generate_aes_key()
-        encrypted_aes_key = encryption.encrypt_aes_key_with_rsa(aes_key, recv_rsa_key)
-
     def receive_message(self, client_socket):
         while True:
             try:
@@ -111,10 +109,21 @@ class Client(threading.Thread):
                     # print(public_key, aes_key, encrypted_aes_key)
                 elif message_dict["MID"] != "M0000-000":
                     print("username" + ": " + message_dict["message"])
+                    self.forward_message(message, client_socket)
                 else:
                     break
             except Exception as e:
                 print("Wystapil blad!")
                 print(e)
+                self.connections.remove(client_socket)
+                client_socket.close()
+
+    def forward_message(self, message, sender_socket):
+        for connection in self.connections:
+            if connection != sender_socket:
+                try:
+                    connection.send(message)
+                except:
+                    self.connections.remove(connection)
 
 # discover_nodes() #
