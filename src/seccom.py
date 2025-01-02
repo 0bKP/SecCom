@@ -1,3 +1,8 @@
+"""
+- Dodac mechanizm czyszczenia terminala podczas otrzymywania wiadomosci
+"""
+
+
 import argparse
 import client
 import server

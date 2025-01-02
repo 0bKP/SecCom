@@ -36,7 +36,7 @@ class Server(threading.Thread):
         server_socket.listen(5)  # Kazdy host moze polaczyc sie maks do 3 innych wezlow
 
         print(f"Serwer nasłuchuje na 0.0.0.0:15000...")
-        client_socket, client_address = server_socket.accept()
+        # client_socket, client_address = server_socket.accept()
         # print(f"client_socket: {client_socket}") #
         # print(f"client_address: {client_address}") #
 
