@@ -1,6 +1,7 @@
 import socket
 import threading
-import server
+import encryption
+import json
 
 BROADCAST_MESSAGE = b"R u there?"
 
@@ -69,6 +70,7 @@ class Client(threading.Thread):
                     client.connect((ip, self.port))
                     print(f"Connected to {ip}:{self.port}")
                     self.conn_count += 1
+                    # self.exchange_keys(client)
                     threading.Thread(target=self.receive_message, args=(client,)).start()
                     threading.Thread(target=self.send_message, args=(client, username)).start()
                 except Exception as e:
@@ -85,15 +87,30 @@ class Client(threading.Thread):
         # print("node_addr: ", node_addr) #
         while True:
             message = input("> ")
-            message = username + ": " + message
-            client_socket.send(message.encode("utf-8"))
+            packet = json.dumps({
+                "message": message,
+                "username": username,
+                "MID": "M0001:000"
+            })
+            client_socket.send(packet.encode("utf-8"))
+
+    def exchange_key(self, key):
+        recv_rsa_key = encryption.receive_key(message_dict["key"])
+        aes_key = encryption.generate_aes_key()
+        encrypted_aes_key = encryption.encrypt_aes_key_with_rsa(aes_key, recv_rsa_key)
 
     def receive_message(self, client_socket):
         while True:
             try:
                 message = client_socket.recv(1024).decode("utf-8")
-                if message:
-                    print(message)
+                message_dict = json.loads(message)
+                if message_dict["MID"] == "M0000-000":
+                    public_key = encryption.receive_key(message_dict["key"])
+                    aes_key = encryption.generate_aes_key()
+                    encrypted_aes_key = encryption.encrypt_aes_key_with_rsa(aes_key, public_key)
+                    # print(public_key, aes_key, encrypted_aes_key)
+                elif message_dict["MID"] != "M0000-000":
+                    print("username" + ": " + message_dict["message"])
                 else:
                     break
             except Exception as e:

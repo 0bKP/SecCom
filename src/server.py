@@ -1,5 +1,7 @@
 import socket
 import threading
+import encryption
+import json
 
 
 class Server(threading.Thread):
@@ -25,11 +27,14 @@ class Server(threading.Thread):
 
     def handle_client(self, client_socket, client_address):
         print(f"Połączono z {client_address}")
+
+        encryption.send_rsa_key(client_socket)
         threading.Thread(target=self.send_message, args=(client_socket,)).start()
         threading.Thread(target=self.receive_message, args=(client_socket,)).start()
 
     def run(self):  # Function called by threading on start
         threading.Thread(target=self.hello_message).start()
+
         # Tworzenie gniazda (socket) dla połączeń TCP
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket.bind(("0.0.0.0", self.listen_port))
@@ -47,12 +52,18 @@ class Server(threading.Thread):
     def send_message(self, connection):
         while True:
             message = input("> ")
-            connection.send(message.encode("utf-8"))
+            packet = json.dumps({
+                "message": message,
+                # "username" : username,
+                "MID": "M0001:000"
+            })
+            connection.send(packet.encode("utf-8"))
 
     def receive_message(self, connection):
         while True:
             message = connection.recv(1024).decode("utf-8")
+            message_dict = json.loads(message)
             if message:
-                print(message)
+                print(message_dict["username"] + ": " + message_dict["message"])
             else:
                 break
