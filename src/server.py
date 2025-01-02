@@ -10,9 +10,21 @@ class Server(threading.Thread):
         self.listen_port = listen_port
         self.room_id = room_id
         self.stash = stash
-        self.clients = []
-        self.hosts = []
+        self.clients = []  # Sockets
+        self.hosts = []  # IP addresses
         # print(f"Zainicjalizowano {listen_port}, {room_id}") #
+
+        self.add_self_to_hosts()
+
+    def add_self_to_hosts(self):
+        try:
+            hostname = socket.gethostname()
+            local_ip = socket.gethostbyname(hostname)
+            if local_ip not in self.hosts:
+                self.hosts.append(local_ip)
+                print(f"[i] Added server's IP to hosts: {local_ip}")
+        except Exception as e:
+            print(f"[!] Failed to add server IP: {e}")
 
     def hello_message(self):
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as hello_socket:
@@ -25,8 +37,8 @@ class Server(threading.Thread):
                 message, addr = hello_socket.recvfrom(1024)
                 print(f"Received hello from {addr[0]}: {message.decode()}")  #
 
-                if addr[0] not in self.hosts:
-                    self.hosts.append(addr[0])
+                # if addr[0] not in self.hosts:
+                #    self.hosts.append(addr[0])
 
                 response_data = {
                     "room_id": self.room_id.decode(),
@@ -38,7 +50,7 @@ class Server(threading.Thread):
 
     def handle_client(self, client_socket, client_address):
         print(f"Połączono z {client_address}")
-        self.clients.append(client_socket)
+        self.hosts.append(client_address[0])
 
         encryption.send_rsa_key(client_socket)
         threading.Thread(target=self.send_message, args=(client_socket,)).start()
