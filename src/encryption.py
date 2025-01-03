@@ -80,6 +80,7 @@ def send_rsa_key(conn, key=None):
 
         clean_line()
         print("[*] Successfully sent RSA key!")
+        return private_key
     except Exception as e:
         print(f"[!] Error sending key: {e}")
 
@@ -100,7 +101,7 @@ def send_aes_key(conn, key=None):
         print(f"[!] Error sending AES key: {e}")
 
 
-def receive_key(key):
+def receive_rsa_key(key):
     try:
         public_key = serialization.load_pem_public_key(key.encode())
 
@@ -112,29 +113,15 @@ def receive_key(key):
         return None
 
 
-"""
-if __name__ == "__main__":
-    # Generowanie kluczy RSA
-    private_key, public_key = generate_rsa_keys()
+def receive_aes_key(key, rsa_private_key):
+    try:
+        aes_key_dehexify = bytes.fromhex(key)
+        decrypted_aes_key = decrypt_aes_key_with_rsa(aes_key_dehexify, rsa_private_key)
 
-    # Generowanie klucza AES
-    aes_key = get_random_bytes(32)  # 256-bitowy klucz AES
+        clean_line()
+        print(f"[*] Received AES key successfully!")
+        return decrypted_aes_key
+    except Exception as e:
+        print(f"[!] Error receiving key: {e}")
+        return None
 
-    # Szyfrowanie klucza AES kluczem publicznym RSA
-    encrypted_aes_key = encrypt_aes_key_with_rsa(aes_key, public_key)
-
-    # Deszyfrowanie klucza AES kluczem prywatnym RSA
-    decrypted_aes_key = decrypt_aes_key_with_rsa(encrypted_aes_key, private_key)
-
-    # Szyfrowanie wiadomości
-    original_message = "Cześć! To jest zaszyfrowana wiadomość."
-    encrypted_message = encrypt_message_with_aes(original_message, aes_key)
-
-    # Deszyfrowanie wiadomości
-    decrypted_message = decrypt_message_with_aes(encrypted_message, decrypted_aes_key)
-
-    # Wyświetlenie wyników
-    print(f"Oryginalna wiadomość: {original_message}")
-    print(f"Zaszyfrowana wiadomość: {encrypted_message}")
-    print(f"Odszyfrowana wiadomość: {decrypted_message}")
-"""

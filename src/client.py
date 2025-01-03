@@ -107,7 +107,7 @@ class Client(threading.Thread):
                 message = client_socket.recv(1024).decode("utf-8")
                 message_dict = json.loads(message)
                 if message_dict["MID"] == "M0000-000":
-                    public_key = encryption.receive_key(message_dict["key"])
+                    public_key = encryption.receive_rsa_key(message_dict["key"])
                     self.aes_key = encryption.generate_aes_key()
                     encrypted_aes_key = encryption.encrypt_aes_key_with_rsa(self.aes_key, public_key)
                     # print(public_key, aes_key, encrypted_aes_key)
@@ -117,7 +117,8 @@ class Client(threading.Thread):
                     sys.stdout.write("\r")
                     sys.stdout.flush()
 
-                    print(message_dict["username"] + ": " + message_dict["message"])
+                    plaintext_message = encryption.decrypt_message_with_aes(message_dict["message"], self.aes_key)
+                    print(message_dict["username"] + ": " + plaintext_message)
 
                     sys.stdout.write(f"{self.username}: ")  # Redisplay the prompt
                     sys.stdout.flush()

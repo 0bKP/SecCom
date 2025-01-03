@@ -12,6 +12,8 @@ class Server(threading.Thread):
         self.room_id = room_id
         self.stash = stash
         self.username = username.lstrip()
+        self.aes_key = None
+        self.rsa_private_key = None
         self.clients = []  # Sockets
         self.hosts = []  # IP addresses
         # print(f"Zainicjalizowano {listen_port}, {room_id}") #
@@ -55,7 +57,7 @@ class Server(threading.Thread):
         print(f"[i] Connected with {client_address[0]}")
         self.hosts.append(client_address[0])
 
-        encryption.send_rsa_key(client_socket)
+        self.rsa_private_key = encryption.send_rsa_key(client_socket)
         threading.Thread(target=self.send_message, args=(client_socket,)).start()
         threading.Thread(target=self.receive_message, args=(client_socket,)).start()
 
@@ -88,8 +90,9 @@ class Server(threading.Thread):
     def send_message(self, connection):
         while True:
             message = input(f"{self.username}: ")
+            encrypted_message = encryption.encrypt_message_with_aes(message, self.aes_key)
             packet = json.dumps({
-                "message": message,
+                "message": encrypted_message,
                 "username": self.username,
                 "MID": "M0001:000"
             })
@@ -100,12 +103,17 @@ class Server(threading.Thread):
             try:
                 message = connection.recv(1024).decode("utf-8")
                 message_dict = json.loads(message)
-                if message:
+
+                if message_dict["MID"] == "M0000-001":
+                    public_key = message_dict["key"]
+                    self.aes_key = encryption.receive_aes_key(public_key, self.rsa_private_key)
+                elif message_dict["MID"] != "M0000-001":
                     sys.stdout.write("\033[2K")  # Clear the entire current line
                     sys.stdout.write("\r")  # Move the cursor to the beginning of the line
                     sys.stdout.flush()
 
-                    print(message_dict["username"] + ": " + message_dict["message"])
+                    plaintext_message = encryption.decrypt_message_with_aes(message_dict["message"], self.aes_key)
+                    print(message_dict["username"] + ": " + plaintext_message)
 
                     sys.stdout.write(f"{self.username}: ")  # Redisplay the prompt
                     sys.stdout.flush()
