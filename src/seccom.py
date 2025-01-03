@@ -1,7 +1,3 @@
-"""
-- Dodac mechanizm czyszczenia terminala podczas otrzymywania wiadomosci
-"""
-
 import argparse
 import peer
 
@@ -19,16 +15,17 @@ args = parser.parse_args()
 if args.discover:
     peer = peer.Peer()
     peer.discover_peers()
-    
+
 if not args.username:
     if not args.discover and args.stash:
         USERNAME = input("Username: ")
 else: USERNAME = args.username
 
 if args.identity:
-    peer = peer.Peer(username=USERNAME)
+    peer = peer.Peer(port=15000, room_id=args.identity.encode(), username=USERNAME)
     ROOM_ID = args.identity
     peer.connect_to_room(ROOM_ID)
+    peer.start()
 
 
 if args.create:
