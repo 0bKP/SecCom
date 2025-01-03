@@ -5,6 +5,13 @@ from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
 import base64
 import json
+import sys
+
+
+def clean_line():
+    sys.stdout.write("\033[2K")
+    sys.stdout.write("\r")
+    sys.stdout.flush()
 
 
 def generate_rsa_keys():
@@ -58,15 +65,9 @@ def decrypt_message_with_aes(encrypted_message, aes_key):
     return message.decode()
 
 
-def exchange_key(finc, *args):
-    if finc == "recv":
-        recv_rsa_key = args[0]
-        aes_key = generate_aes_key()
-        encrypted_aes_key = encrypt_aes_key_with_rsa(aes_key, recv_rsa_key)
-
-
-def send_rsa_key(conn):
-    private_key, public_key = generate_rsa_keys()
+def send_rsa_key(conn, key=None):
+    if not key:
+        private_key, public_key = generate_rsa_keys()
     try:
         serialized_key = json.dumps({
             'key': public_key.public_bytes(
@@ -76,16 +77,38 @@ def send_rsa_key(conn):
             'MID': "M0000-000"
         })
         conn.sendall(serialized_key.encode())
+
+        clean_line()
+        print("[*] Successfully sent RSA key!")
     except Exception as e:
-        print(f"Error sending key: {e}")
+        print(f"[!] Error sending key: {e}")
+
+
+def send_aes_key(conn, key=None):
+    if not key:
+        aes_key = generate_aes_key()
+    try:
+        data = json.dumps({
+            'key': key.hex(),
+            'MID': "M0000-001"
+        })
+        conn.sendall(data.encode())
+
+        clean_line()
+        print("[*] Successfully sent AES key!")
+    except Exception as e:
+        print(f"[!] Error sending AES key: {e}")
 
 
 def receive_key(key):
     try:
         public_key = serialization.load_pem_public_key(key.encode())
+
+        clean_line()
+        print("[*] Received RSA key successfully!")
         return public_key
     except Exception as e:
-        print(f"Error receiving key: {e}")
+        print(f"[!] Error receiving key: {e}")
         return None
 
 

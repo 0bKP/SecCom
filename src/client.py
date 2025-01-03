@@ -2,6 +2,7 @@ import socket
 import threading
 import encryption
 import json
+import sys
 
 BROADCAST_MESSAGE = b"R u there?"
 
@@ -12,6 +13,7 @@ class Client(threading.Thread):
         self.port = port
         self.conn_count = 0
         self.timeout = 5
+        self.aes_key = None
         self.connections = []
 
     def discover_nodes(self, verbose=True):
@@ -59,6 +61,7 @@ class Client(threading.Thread):
         # x = input("connect_to_room exec") #
         active_rooms = self.discover_nodes(verbose=False)
         target_ip = active_rooms[room_id]
+        self.username = username.lstrip()
         # print(len(target_ip)) #
         # Zaimplementowac spanning tree dla len(active_rooms[room_id]) >= 5
 
@@ -75,7 +78,7 @@ class Client(threading.Thread):
                     self.connections.append(client_socket)
                     # self.exchange_keys(client)
                     threading.Thread(target=self.receive_message, args=(client_socket,)).start()
-                    threading.Thread(target=self.send_message, args=(client_socket, username)).start()
+                    threading.Thread(target=self.send_message, args=(client_socket, self.username)).start()
                 except Exception as e:
                     print(f"[!] Failed to connect to {ip}: {e}")
 
@@ -89,10 +92,11 @@ class Client(threading.Thread):
         # x = input("send_message exec") #
         # print("node_addr: ", node_addr) #
         while True:
-            message = input("> ")
+            message = input(f"{username}: ")
+            encrypted_message = encryption.encrypt_message_with_aes(message, self.aes_key)
             packet = json.dumps({
-                "message": message,
-                "username": username,
+                "message": encrypted_message,
+                "username": self.username,
                 "MID": "M0001:000"
             })
             client_socket.send(packet.encode("utf-8"))
@@ -104,17 +108,24 @@ class Client(threading.Thread):
                 message_dict = json.loads(message)
                 if message_dict["MID"] == "M0000-000":
                     public_key = encryption.receive_key(message_dict["key"])
-                    aes_key = encryption.generate_aes_key()
-                    encrypted_aes_key = encryption.encrypt_aes_key_with_rsa(aes_key, public_key)
+                    self.aes_key = encryption.generate_aes_key()
+                    encrypted_aes_key = encryption.encrypt_aes_key_with_rsa(self.aes_key, public_key)
                     # print(public_key, aes_key, encrypted_aes_key)
+                    encryption.send_aes_key(client_socket, encrypted_aes_key)
                 elif message_dict["MID"] != "M0000-000":
-                    print("username" + ": " + message_dict["message"])
+                    sys.stdout.write("\033[2K")
+                    sys.stdout.write("\r")
+                    sys.stdout.flush()
+
+                    print(message_dict["username"] + ": " + message_dict["message"])
+
+                    sys.stdout.write(f"{self.username}: ")  # Redisplay the prompt
+                    sys.stdout.flush()
                     self.forward_message(message, client_socket)
                 else:
                     break
             except Exception as e:
-                print("Wystapil blad!")
-                print(e)
+                print(f"[!] An error occurred: {e}")
                 self.connections.remove(client_socket)
                 client_socket.close()
 

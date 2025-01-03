@@ -2,7 +2,6 @@
 - Dodac mechanizm czyszczenia terminala podczas otrzymywania wiadomosci
 """
 
-
 import argparse
 import client
 import server
@@ -16,6 +15,7 @@ parser.add_argument("-d", "--discover", help="Discover active rooms", action="st
 parser.add_argument("-i", "--identity", help="Room ID you want to join", type=str)
 parser.add_argument("-u", "--username", help="Username", type=str)
 parser.add_argument("-c", "--create", help="Room ID you want to create", type=str)
+parser.add_argument("-s", "--stash", help="[Server option] Hide room from discovery", action="store_false")
 
 args = parser.parse_args()
 
@@ -25,16 +25,16 @@ client.start()
 if args.discover:
     client.discover_nodes()
 
-if args.username:
-    USERNAME = args.username
+if not args.username:
+    if not args.discover and args.stash:
+        USERNAME = input("Username: ")
+else: USERNAME = args.username
 
 if args.identity:
     ROOM_ID = args.identity
-    if USERNAME:
-        client.connect_to_room(ROOM_ID, USERNAME)
-    else:
-        print("[!] You must enter username.")
+    client.connect_to_room(ROOM_ID, USERNAME)
+
 
 if args.create:
-    server = server.Server(listen_port=15000, room_id=args.create.encode())
+    server = server.Server(listen_port=15000, room_id=args.create.encode(), stash=args.stash, username=USERNAME)
     server.start()
