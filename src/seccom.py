@@ -3,10 +3,7 @@
 """
 
 import argparse
-import client
-import server
-
-USERNAME = 0
+import peer
 
 parser = argparse.ArgumentParser(
     prog="SecCom",
@@ -19,22 +16,21 @@ parser.add_argument("-s", "--stash", help="[Server option] Hide room from discov
 
 args = parser.parse_args()
 
-client = client.Client()
-client.start()
-
 if args.discover:
-    client.discover_nodes()
-
+    peer = peer.Peer()
+    peer.discover_peers()
+    
 if not args.username:
     if not args.discover and args.stash:
         USERNAME = input("Username: ")
 else: USERNAME = args.username
 
 if args.identity:
+    peer = peer.Peer(username=USERNAME)
     ROOM_ID = args.identity
-    client.connect_to_room(ROOM_ID, USERNAME)
+    peer.connect_to_room(ROOM_ID)
 
 
 if args.create:
-    server = server.Server(listen_port=15000, room_id=args.create.encode(), stash=args.stash, username=USERNAME)
+    server = peer.Peer(port=15000, room_id=args.create.encode(), username=USERNAME)
     server.start()

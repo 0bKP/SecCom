@@ -6,7 +6,6 @@ import json
 
 DEFAULT_TIMEOUT = 5
 
-
 class Peer(threading.Thread):
     def __init__(self, port=15000, username="", room_id=None):
         super(Peer, self).__init__()
@@ -20,7 +19,7 @@ class Peer(threading.Thread):
         self.timeout = DEFAULT_TIMEOUT
 
         self.peers.append(self.get_ip("lhost"))
-
+        
     def run(self):
         threading.Thread(target=self.listen_for_peers).start()
 
@@ -31,7 +30,8 @@ class Peer(threading.Thread):
         while self.running:
             client_socket, client_address = server_socket.accept()
             self.handle_peer(client_socket, client_address)
-
+        
+                         
     def discover_peers(self, verbose=True):
         BROADCAST_MESSAGE = b"R u there?"
         # Function broadcasts a message in order to detect active nodes
@@ -53,10 +53,10 @@ class Peer(threading.Thread):
                     hosts = response_data.get("peers", [])
                     if room_id:
                         active_rooms.setdefault(room_id, []).extend(hosts)
-                    # print(f"Received response from {addr[0]} on port {self.port}: {response.decode()}") #
+                    #print(f"Received response from {addr[0]} on port {self.port}: {response.decode()}") #
             except socket.timeout:
                 for room_id in active_rooms:
-                    active_rooms[room_id] = list(set(active_rooms[room_id]))  # Delete duplicates
+                    active_rooms[room_id] = list(set(active_rooms[room_id])) # Delete duplicates
 
                 if verbose:
                     if active_rooms:
@@ -72,7 +72,7 @@ class Peer(threading.Thread):
 
             if self.aes_key == None:
                 self.aes_key = encryption.generate_aes_key()
-
+                
             # print(f"Listening on port {self.listen_port}...")  #
             print("[i] Server has successfully started!")
 
@@ -80,17 +80,17 @@ class Peer(threading.Thread):
                 message, addr = hello_socket.recvfrom(1024)
                 # print(f"Received hello from {addr[0]}: {message.decode()}")  #
 
-                # if addr[0] not in self.hosts:
+                #if addr[0] not in self.hosts:
                 #    self.hosts.append(addr[0])
 
                 response_data = {
-                    "room_id": self.room_id.decode(),
-                    "peers": self.peers}
+                    "room_id" : self.room_id.decode(),
+                    "peers" : self.peers}
                 response_json = json.dumps(response_data)
-
+                
                 hello_socket.sendto(response_json.encode(), addr)
                 # print(f"Response sent to {addr[0]}")  #
-
+        
     def get_ip(self, req):
         hostname = socket.gethostname()
         ip = socket.gethostbyname(hostname)
@@ -101,7 +101,7 @@ class Peer(threading.Thread):
             octets = ip.split(".")
             octets[3] = "255"
             octets = ".".join(octets)
-
+        
             return octets
 
     def connect_to_room(self, room_id):
@@ -110,13 +110,14 @@ class Peer(threading.Thread):
         target_ip = active_rooms[room_id]
         # print(len(target_ip)) #
         # Zaimplementowac spanning tree dla len(active_rooms[room_id]) >= 5
+    
 
         if not target_ip:
             print(f"[!] Room {room_id} not found.")
             return
 
         if len(target_ip) < 5:
-            # self.rsa_private_key = encryption.send_rsa_key(
+            #self.rsa_private_key = encryption.send_rsa_key(
             for ip in target_ip:
                 client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 try:
@@ -125,7 +126,7 @@ class Peer(threading.Thread):
                     self.peers.append(client_socket)
                     # Wymiana kluczy
                     self.rsa_private_key = encryption.send_rsa_key(client_socket)
-
+                        
                     threading.Thread(target=self.receive_message, args=(client_socket,)).start()
                     threading.Thread(target=self.send_message, args=(client_socket,)).start()
                 except Exception as e:
@@ -134,44 +135,44 @@ class Peer(threading.Thread):
     def handle_peer(self, client_socket, client_address):
         print(f"[i] Connected with {client_address[0]}")
         self.peers.append(client_address[0])
-
+        
         # Tutaj odbywa sie wymiana kluczami z nowymi wezlami
         # Przyjmij cudzy klucz publiczny RSA.
         # Zaszyfruj klucz AES
         # Wyslij
         # Wezel go odszyfrowywuje swoim prywatnym kluczem RSA
-
-        # self.rsa_private_key = encryption.send_rsa_key(client_socket)
-
+        
+        #self.rsa_private_key = encryption.send_rsa_key(client_socket)
+        
         threading.Thread(target=self.send_message, args=(client_socket,)).start()
         threading.Thread(target=self.receive_message, args=(client_socket,)).start()
-
+        
     def send_message(self, connection):
         while True:
             message = input(f"{self.username}: ")
             encrypted_message = encryption.encrypt_message_with_aes(message, self.aes_key)
             packet = json.dumps({
-                "message": encrypted_message,
-                "username": self.username,
-                "MID": "M0001:000"
+                "message" : encrypted_message,
+                "username" : self.username,
+                "MID" : "M0001-000"
             })
             connection.send(packet.encode("utf-8"))
 
-    def receive_message(self, client_socket):
+    def receive_message(self, client_socket):        
         while True:
             try:
                 message = client_socket.recv(1024).decode("utf-8")
                 message_dict = json.loads(message)
-
-                if message_dict["MID"] == "M0000-000":
+                
+                if message_dict["MID"] == "M0000-000": 
                     public_key = encryption.receive_rsa_key(message_dict["key"])
                     encrypted_aes_key = encryption.encrypt_aes_key_with_rsa(self.aes_key, public_key)
-                    # print(public_key, aes_key, encrypted_aes_key)
+                    #print(public_key, aes_key, encrypted_aes_key)
                     encryption.send_aes_key(client_socket, encrypted_aes_key)
                 elif message_dict["MID"] == "M0000-001":
                     public_key = message_dict["key"]
                     self.aes_key = encryption.receive_aes_key(public_key, self.rsa_private_key)
-                elif message_dict["MID"] != "M0000-000":
+                else:
                     sys.stdout.write("\033[2K")
                     sys.stdout.write("\r")
                     sys.stdout.flush()
@@ -182,14 +183,7 @@ class Peer(threading.Thread):
                     sys.stdout.write(f"{self.username}: ")  # Redisplay the prompt
                     sys.stdout.flush()
                     # self.forward_message(message, client_socket)
-                else:
-                    break
             except Exception as e:
                 print(f"[!] An error occurred: {e}")
-                # self.peers.remove(client_socket)
-                # client_socket.close()
-
-
-if __name__ == "main":
-    peer = Peer(port=15000, username="User1", room_id="room1")
-    peer.start()
+                #self.peers.remove(client_socket)
+                #client_socket.close()

@@ -1,6 +1,0 @@
-cryptography
-json
-socket
-threading
-argparse
-base64

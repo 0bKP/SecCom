@@ -7,13 +7,11 @@ import base64
 import json
 import sys
 
-
 def clean_line():
     sys.stdout.write("\033[2K")
     sys.stdout.write("\r")
     sys.stdout.flush()
-
-
+    
 def generate_rsa_keys():
     private_key = rsa.generate_private_key(
         public_exponent=65537,
@@ -22,10 +20,8 @@ def generate_rsa_keys():
     public_key = private_key.public_key()
     return private_key, public_key
 
-
 def generate_aes_key(size=32):
     return get_random_bytes(size)
-
 
 def encrypt_aes_key_with_rsa(aes_key, public_key):
     encrypted_key = public_key.encrypt(
@@ -64,7 +60,6 @@ def decrypt_message_with_aes(encrypted_message, aes_key):
     message = cipher.decrypt_and_verify(ciphertext, tag)
     return message.decode()
 
-
 def send_rsa_key(conn, key=None):
     if not key:
         private_key, public_key = generate_rsa_keys()
@@ -74,7 +69,7 @@ def send_rsa_key(conn, key=None):
                 encoding=serialization.Encoding.PEM,
                 format=serialization.PublicFormat.SubjectPublicKeyInfo
             ).decode(),
-            'MID': "M0000-000"
+            'MID' : "M0000-000"
         })
         conn.sendall(serialized_key.encode())
 
@@ -84,23 +79,21 @@ def send_rsa_key(conn, key=None):
     except Exception as e:
         print(f"[!] Error sending key: {e}")
 
-
 def send_aes_key(conn, key=None):
     if not key:
         aes_key = generate_aes_key()
     try:
         data = json.dumps({
-            'key': key.hex(),
-            'MID': "M0000-001"
-        })
+            'key' : key.hex(),
+            'MID' : "M0000-001"
+            })
         conn.sendall(data.encode())
-
+        
         clean_line()
         print("[*] Successfully sent AES key!")
     except Exception as e:
         print(f"[!] Error sending AES key: {e}")
-
-
+        
 def receive_rsa_key(key):
     try:
         public_key = serialization.load_pem_public_key(key.encode())
@@ -111,7 +104,6 @@ def receive_rsa_key(key):
     except Exception as e:
         print(f"[!] Error receiving key: {e}")
         return None
-
 
 def receive_aes_key(key, rsa_private_key):
     try:
